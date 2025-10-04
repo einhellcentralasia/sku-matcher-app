@@ -12,7 +12,7 @@ THEMES = {
     },
     "Dark": {
         "bg": "#0b0b0c",
-        "card": "#16165a",
+        "card": "#16161a",
         "text": "#f3f3f3",
         "muted": "#a0a0a0",
         "accent": "#0a84ff",
@@ -20,9 +20,8 @@ THEMES = {
     }
 }
 
-
 def build_css(light: dict, dark: dict) -> str:
-    """Return the CSS string using provided palettes."""
+    """Return CSS with both palettes; actual pick is done by the class on <html>."""
     return f"""
 <style>
 :root, .light-theme {{
@@ -47,16 +46,20 @@ html, body, .stApp, [data-testid="stAppViewContainer"] {{
   color: var(--text) !important;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }}
+
 [data-testid="stHeader"] {{
   background: var(--bg) !important;
   border-bottom: 1px solid var(--border);
 }}
+
 h1, h2, h3, .stMarkdown, .stText, .stCaption, label, p, span, div {{
   color: var(--text) !important;
 }}
 small, .muted {{ color: var(--muted) !important; }}
+
 .block-container {{ padding-top: 1rem !important; }}
 section.main > div {{ border-radius: 18px; }}
+
 .stButton>button, .stDownloadButton>button {{
   border-radius: 12px;
   padding: 8px 14px;
@@ -74,7 +77,7 @@ section.main > div {{ border-radius: 18px; }}
   border:1px solid var(--border); color: var(--text);
 }}
 
-/* File uploader: readable text + visible box */
+/* File uploader — контрастный, читаемый */
 [data-testid="stFileUploader"] * {{ color: var(--text) !important; }}
 [data-testid="stFileUploader"] [data-testid="stFileUploaderDropzone"] {{
   background: var(--card) !important;
