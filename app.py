@@ -7,7 +7,7 @@
 # - Minimal UI (Apple-ish)
 # - EN/RU language toggle (cookie if available, else session)
 # - Dark/Light theme toggle (default Dark), applied BEFORE any UI renders
-# - Same I/O contract you defined (template -> upload -> output.xlsx)
+# - High-contrast file uploader + clear theme differences
 
 import os
 os.environ["STREAMLIT_HOME"] = "/tmp"  # safe home in managed hosts
@@ -86,53 +86,75 @@ TXT = {
 }
 
 # -------------------------------
-# Minimal Apple-like CSS + Theme switch (strong overrides)
+# Strong theme CSS + high-contrast uploader
 # -------------------------------
 BASE_CSS = """
 <style>
 :root, .light-theme {
   --bg: #ffffff;
-  --card: #f6f7f8;
-  --text: #111111;
-  --muted: #6b7280;
-  --accent: #0071e3; /* Apple-ish blue */
+  --card: #f3f4f6;               /* a bit darker than pure white */
+  --text: #0f172a;               /* slate-900 */
+  --muted: #475569;              /* slate-600 */
+  --accent: #0071e3;             /* Apple blue */
+  --border: rgba(15,23,42,0.15);
 }
 .dark-theme {
-  --bg: #0b0b0c;
-  --card: #151517;
-  --text: #f3f3f3;
+  --bg: #0b0b0c;                 /* near black */
+  --card: #16161a;               /* dark card */
+  --text: #f3f3f3;               /* light text */
   --muted: #a0a0a0;
   --accent: #0a84ff;
+  --border: rgba(255,255,255,0.16);
 }
-html, body, .stApp {
+
+/* Apply everywhere */
+html, body, .stApp, [data-testid="stAppViewContainer"] {
   background: var(--bg) !important;
   color: var(--text) !important;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
+
+/* Header */
 [data-testid="stHeader"] {
   background: var(--bg) !important;
-  border-bottom: 1px solid rgba(127,127,127,0.15);
+  border-bottom: 1px solid var(--border);
 }
 h1, h2, h3, .stMarkdown, .stText, .stCaption, label, p, span, div {
   color: var(--text) !important;
 }
+small, .muted { color: var(--muted) !important; }
 .block-container { padding-top: 1rem !important; }
+
+/* Cards / widgets */
 section.main > div { border-radius: 18px; }
 .stButton>button, .stDownloadButton>button {
   border-radius: 12px;
   padding: 8px 14px;
-  border: 1px solid rgba(127,127,127,0.25);
+  border: 1px solid var(--border);
   background: var(--card);
   color: var(--text);
 }
 .stButton>button:hover, .stDownloadButton>button:hover { border-color: var(--accent); }
-small, .muted { color: var(--muted) !important; }
-.header-row { display:flex; align-items:center; gap:1rem; margin-bottom: .5rem; }
+
+/* Language & theme pills */
+.header-row { display:flex; align-items:center; gap:1rem; margin-bottom:.5rem; }
 .header-row .grow { flex:1; }
 .header-pill {
   display:inline-flex; gap:6px; align-items:center; padding:6px 10px;
   border-radius:999px; background: var(--card);
-  border:1px solid rgba(127,127,127,0.2); color: var(--text);
+  border:1px solid var(--border); color: var(--text);
+}
+
+/* File uploader: make text readable + box visible */
+[data-testid="stFileUploader"] * { color: var(--text) !important; }
+[data-testid="stFileUploader"] [data-testid="stFileUploaderDropzone"] {
+  background: var(--card) !important;
+  color: var(--text) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 14px !important;
+}
+[data-testid="stFileUploader"] [data-testid="stFileUploaderDropzone"] div {
+  color: var(--text) !important;
 }
 </style>
 """
@@ -151,7 +173,6 @@ def get_cookie_manager():
     return CookieManager() if COOKIE_OK else None
 
 def read_pref(cm, key, default):
-    # 1) cookie, 2) session_state
     if cm:
         try:
             val = cm.get(key)
@@ -264,7 +285,7 @@ def main():
         if theme_choice not in ("Dark", "Light"):
             theme_choice = theme_default
 
-        # ⚡ Apply CSS/theme FIRST so header is readable
+        # Apply CSS/theme FIRST so header is readable
         set_theme_class(theme_choice)
         t = TXT[lang]
 
