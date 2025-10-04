@@ -3,7 +3,7 @@
 
 THEMES = {
     "Light": {
-        "bg": "#ffffff",
+        "bg": "#0D1116",
         "card": "#f3f4f6",
         "text": "#0f172a",
         "muted": "#475569",
