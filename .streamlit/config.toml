@@ -1,5 +1,5 @@
 [theme]
-base="dark"         # Dark mode by default
+base="dark"
 primaryColor="#0a84ff"
 backgroundColor="#0b0b0c"
 secondaryBackgroundColor="#151517"
