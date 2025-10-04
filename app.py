@@ -2,25 +2,23 @@
 # -*- coding: utf-8 -*-
 
 # =========================
-# SKU/Model Matcher - Streamlit App
+# SKU/Model Matcher — Streamlit App
 # =========================
-# Design goals:
-# - Minimal UI, Apple-like feel
-# - EN/RU language toggle (remember via cookie if available; else session)
-# - Dark/Light toggle (default Dark; CSS-based toggle)
-# - Robust error handling up-front
-# - Clear success logs when done
+# - Minimal UI (Apple-ish)
+# - EN/RU language toggle (cookie if available, else session)
+# - Dark/Light theme toggle (default Dark), applied BEFORE any UI renders
+# - Same I/O contract you defined (template -> upload -> output.xlsx)
 
 import os
-os.environ["STREAMLIT_HOME"] = "/tmp"
+os.environ["STREAMLIT_HOME"] = "/tmp"  # safe home in managed hosts
+
 import io
 import sys
 import traceback
 import pandas as pd
 import streamlit as st
 
-# Optional cookie persistence (best effort).
-# If streamlit-extras is unavailable, the app still works (session-only memory).
+# Optional cookie persistence; app still works without it
 try:
     from streamlit_extras.cookie_manager import CookieManager
     COOKIE_OK = True
@@ -30,6 +28,8 @@ except Exception:
 
 APP_TITLE = "SKU / Model Matcher"
 REF_FILE = "sku_model_list.xlsx"  # must sit next to app.py in repo
+
+st.set_page_config(page_title=APP_TITLE, layout="wide")
 
 # -------------------------------
 # i18n dictionary
@@ -86,7 +86,7 @@ TXT = {
 }
 
 # -------------------------------
-# Minimal Apple-like CSS + Theme switch
+# Minimal Apple-like CSS + Theme switch (strong overrides)
 # -------------------------------
 BASE_CSS = """
 <style>
@@ -94,7 +94,7 @@ BASE_CSS = """
   --bg: #ffffff;
   --card: #f6f7f8;
   --text: #111111;
-  --muted: #777777;
+  --muted: #6b7280;
   --accent: #0071e3; /* Apple-ish blue */
 }
 .dark-theme {
@@ -109,35 +109,40 @@ html, body, .stApp {
   color: var(--text) !important;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
-.block-container { padding-top: 2rem; }
-header, [data-testid="stHeader"] { background: transparent !important; }
-h1, h2, h3 { letter-spacing: -0.01em; }
+[data-testid="stHeader"] {
+  background: var(--bg) !important;
+  border-bottom: 1px solid rgba(127,127,127,0.15);
+}
+h1, h2, h3, .stMarkdown, .stText, .stCaption, label, p, span, div {
+  color: var(--text) !important;
+}
+.block-container { padding-top: 1rem !important; }
 section.main > div { border-radius: 18px; }
 .stButton>button, .stDownloadButton>button {
   border-radius: 12px;
-  padding: 0.5rem 0.9rem;
-  border: 1px solid rgba(127,127,127,0.2);
+  padding: 8px 14px;
+  border: 1px solid rgba(127,127,127,0.25);
   background: var(--card);
   color: var(--text);
 }
-.stButton>button:hover, .stDownloadButton>button:hover {
-  border-color: var(--accent);
-}
-.st-emotion-cache-1xarl3l, .st-emotion-cache-1v0mbdj { background: var(--card) !important; }
-small, .muted { color: var(--muted); }
-.header-row { display: flex; align-items: center; gap: 1rem; }
-.header-row .grow { flex: 1; }
+.stButton>button:hover, .stDownloadButton>button:hover { border-color: var(--accent); }
+small, .muted { color: var(--muted) !important; }
+.header-row { display:flex; align-items:center; gap:1rem; margin-bottom: .5rem; }
+.header-row .grow { flex:1; }
 .header-pill {
-  display: inline-flex; gap: 6px; align-items: center; padding: 6px 10px;
-  border-radius: 999px; background: var(--card); border: 1px solid rgba(127,127,127,0.2);
+  display:inline-flex; gap:6px; align-items:center; padding:6px 10px;
+  border-radius:999px; background: var(--card);
+  border:1px solid rgba(127,127,127,0.2); color: var(--text);
 }
 </style>
 """
 
 def set_theme_class(theme_choice: str):
-    # Injects a theme class onto the app root
     theme_class = "dark-theme" if theme_choice == "Dark" else "light-theme"
-    st.markdown(BASE_CSS + f"<script>document.documentElement.className='{theme_class}';</script>", unsafe_allow_html=True)
+    st.markdown(
+        BASE_CSS + f"<script>document.documentElement.className='{theme_class}';</script>",
+        unsafe_allow_html=True
+    )
 
 # -------------------------------
 # Helpers: persistence (cookie/session)
@@ -172,20 +177,17 @@ def load_reference(ref_path: str):
     if not os.path.exists(ref_path):
         raise FileNotFoundError("REF_MISSING")
     df = pd.read_excel(ref_path, sheet_name=0)
-    # Normalize expected columns
     cols_lower = [str(c).strip().lower() for c in df.columns]
     df.columns = cols_lower
     needed = ["sku", "model", "raw_model"]
     if any(c not in cols_lower for c in needed):
         raise ValueError("REF_BAD_SCHEMA")
-    # Cast types & normalize
     df["sku"] = df["sku"].astype(str).fillna("").str.strip()
     df["model"] = df["model"].astype(str).fillna("").str.strip()
     df["raw_model"] = df["raw_model"].astype(str).fillna("").str.strip()
     return df
 
 def process(raw_df: pd.DataFrame, ref_df: pd.DataFrame) -> pd.DataFrame:
-    # Validate header
     cols_lower = [str(c).strip().lower() for c in raw_df.columns]
     if len(cols_lower) != 1 or cols_lower[0] != "raw_name":
         raise ValueError("BAD_HEADER")
@@ -196,17 +198,16 @@ def process(raw_df: pd.DataFrame, ref_df: pd.DataFrame) -> pd.DataFrame:
     # Precompute lowercase lists/maps
     sku_list = df_sku["sku"].astype(str).tolist()
     sku_list_l = [s.lower() for s in sku_list]
-    model_map = dict(zip(sku_list, df_sku["model"].astype(str)))
     model_map_l = dict(zip(sku_list_l, df_sku["model"].astype(str)))
 
     raw_models = df_sku["raw_model"].astype(str).tolist()
     raw_models_l = [rm.lower() for rm in raw_models]
-    raw_model_to_sku = dict(zip(raw_models_l, df_sku["sku"].astype(str)))
-    raw_model_to_model = dict(zip(raw_models_l, df_sku["model"].astype(str)))
+    rm_to_sku = dict(zip(raw_models_l, df_sku["sku"].astype(str)))
+    rm_to_model = dict(zip(raw_models_l, df_sku["model"].astype(str)))
 
     found_skus, found_models = [], []
 
-    # Pass 1: find SKU substring (case-insensitive)
+    # Pass 1: SKU (case-insensitive substring)
     for name in df_raw["raw_name"]:
         nm = str(name).lower()
         hit_sku = None
@@ -221,19 +222,19 @@ def process(raw_df: pd.DataFrame, ref_df: pd.DataFrame) -> pd.DataFrame:
             found_skus.append("not found")
             found_models.append("not found")
 
-    # Pass 2: if no SKU, try raw_model substring
-    for i, (nm, sku_now) in enumerate(zip(df_raw["raw_name"].astype(str).str.lower(), found_skus)):
-        if sku_now == "not found":
+    # Pass 2: raw_model if no SKU found
+    for i, nm in enumerate(df_raw["raw_name"].astype(str).str.lower()):
+        if found_skus[i] == "not found":
             for rm_l in raw_models_l:
                 if rm_l and rm_l in nm:
-                    found_skus[i] = raw_model_to_sku[rm_l]
-                    found_models[i] = raw_model_to_model[rm_l]
+                    found_skus[i] = rm_to_sku[rm_l]
+                    found_models[i] = rm_to_model[rm_l]
                     break
 
-    df_out = df_raw.copy()
-    df_out["sku"] = found_skus
-    df_out["model"] = found_models
-    return df_out
+    out = df_raw.copy()
+    out["sku"] = found_skus
+    out["model"] = found_models
+    return out
 
 def make_template_bytes() -> bytes:
     bio = io.BytesIO()
@@ -249,7 +250,6 @@ def make_output_bytes(df: pd.DataFrame) -> bytes:
 # App
 # -------------------------------
 def main():
-    # Error handling at the very beginning
     try:
         cm = get_cookie_manager()
 
@@ -264,31 +264,36 @@ def main():
         if theme_choice not in ("Dark", "Light"):
             theme_choice = theme_default
 
+        # ⚡ Apply CSS/theme FIRST so header is readable
         set_theme_class(theme_choice)
         t = TXT[lang]
 
-        # Header row (title + toggles on the right)
-        st.markdown(f"<div class='header-row'><div class='grow'><h1>{t['title']}</h1><div class='muted'>{t['subtitle']}</div></div>", unsafe_allow_html=True)
+        # Header row
+        st.markdown(
+            f"<div class='header-row'>"
+            f"<div class='grow'><h1>{t['title']}</h1>"
+            f"<div class='muted'>{t['subtitle']}</div></div>",
+            unsafe_allow_html=True
+        )
         col_lang, col_theme = st.columns([0.12, 0.12])
         with col_lang:
-            new_lang = st.radio(t["lang"], options=["EN", "RU"], index=0 if lang=="EN" else 1, horizontal=True, key="lang_radio")
+            new_lang = st.radio(t["lang"], options=["EN", "RU"],
+                                index=0 if lang == "EN" else 1, horizontal=True, key="lang_radio")
         with col_theme:
-            new_theme = st.radio(t["theme"], options=["Dark", "Light"], index=0 if theme_choice=="Dark" else 1, horizontal=True, key="theme_radio")
+            new_theme = st.radio(t["theme"], options=["Dark", "Light"],
+                                 index=0 if theme_choice == "Dark" else 1, horizontal=True, key="theme_radio")
         st.markdown("</div>", unsafe_allow_html=True)
 
-        # Persist changes if user toggled
+        # Persist changes
         if new_lang != lang:
-            lang = new_lang
-            write_pref(cm, "pref_lang", lang)
+            write_pref(cm, "pref_lang", new_lang)
             st.rerun()
         if new_theme != theme_choice:
-            theme_choice = new_theme
-            write_pref(cm, "pref_theme", theme_choice)
+            write_pref(cm, "pref_theme", new_theme)
             st.rerun()
 
         # Rebind translations after possible rerun
-        t = TXT[lang]
-        set_theme_class(theme_choice)
+        t = TXT[read_pref(cm, "pref_lang", lang_default)]
 
         st.caption(f"📝 {t['tmpl_note']}")
         st.download_button(t["download_tmpl"], data=make_template_bytes(), file_name="raw_names_input.xlsx")
@@ -297,40 +302,29 @@ def main():
         st.write(f"**{t['upload_label']}**")
         up = st.file_uploader(" ", type=["xlsx"], accept_multiple_files=False, label_visibility="collapsed")
 
-        # Load reference (fail fast with a friendly error)
+        # Load reference (fail fast with friendly error)
         try:
             ref = load_reference(REF_FILE)
             st.caption("ℹ️ " + t["using_ref"].format(name=REF_FILE, rows=len(ref)))
         except FileNotFoundError:
-            st.error(t["err_ref_missing"])
-            st.stop()
+            st.error(t["err_ref_missing"]); st.stop()
         except ValueError:
-            st.error(t["err_ref_schema"])
-            st.stop()
+            st.error(t["err_ref_schema"]); st.stop()
         except Exception as e:
-            st.error(f"{t['err_generic']}: {e}")
-            st.stop()
+            st.error(f"{t['err_generic']}: {e}"); st.stop()
 
         st.write(f"_{t['helper']}_")
 
-        if st.button(t["process_btn"], type="primary", use_container_width=False, disabled=(up is None)):
+        if st.button(t["process_btn"], type="primary", disabled=(up is None)):
             if up is None:
-                st.warning(t["upload_label"])
-                st.stop()
+                st.warning(t["upload_label"]); st.stop()
             try:
                 raw_df = pd.read_excel(up, sheet_name=0)  # first sheet only
-            except Exception as e:
-                st.error(f"{t['err_generic']}: {e}")
-                st.stop()
-
-            try:
                 with st.spinner("Processing..."):
                     df_out = process(raw_df, ref)
                 st.success(t["ok_done"].format(n=len(df_out)))
-
                 st.subheader(t["preview_head"])
                 st.dataframe(df_out.head(200), use_container_width=True)
-
                 st.download_button(
                     label=t["dl_output"],
                     data=make_output_bytes(df_out),
@@ -349,7 +343,6 @@ def main():
         st.markdown(f"<p class='muted'>{t['footer']}</p>", unsafe_allow_html=True)
 
     except Exception as fatal:
-        # last line of defense (won't crash the app UI)
         st.error("💥 Fatal: " + str(fatal))
         st.text("Traceback:")
         st.code("".join(traceback.format_exc()))
