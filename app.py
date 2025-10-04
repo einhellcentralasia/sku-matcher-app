@@ -4,19 +4,19 @@
 # =========================
 # SKU/Model Matcher — Streamlit App
 # =========================
-# - Minimal UI (Apple-ish)
-# - EN/RU language toggle (cookie if available, else session)
-# - Dark/Light theme toggle (default Dark), applied BEFORE any UI renders
-# - High-contrast file uploader + clear theme differences
+# Logic in this file; colors live in palette.py
 
 import os
-os.environ["STREAMLIT_HOME"] = "/tmp"  # safe home in managed hosts
+os.environ["STREAMLIT_HOME"] = "/tmp"
 
 import io
 import sys
 import traceback
 import pandas as pd
 import streamlit as st
+
+# theme/palette
+from palette import THEMES, build_css  # <-- centralized colors
 
 # Optional cookie persistence; app still works without it
 try:
@@ -27,13 +27,10 @@ except Exception:
     COOKIE_OK = False
 
 APP_TITLE = "SKU / Model Matcher"
-REF_FILE = "sku_model_list.xlsx"  # must sit next to app.py in repo
+REF_FILE = "sku_model_list.xlsx"
 
 st.set_page_config(page_title=APP_TITLE, layout="wide")
 
-# -------------------------------
-# i18n dictionary
-# -------------------------------
 TXT = {
     "EN": {
         "title": "SKU / Model Matcher",
@@ -85,99 +82,24 @@ TXT = {
     }
 }
 
-# -------------------------------
-# Strong theme CSS + high-contrast uploader
-# -------------------------------
-BASE_CSS = """
-<style>
-:root, .light-theme {
-  --bg: #ffffff;
-  --card: #f3f4f6;               /* a bit darker than pure white */
-  --text: #0f172a;               /* slate-900 */
-  --muted: #475569;              /* slate-600 */
-  --accent: #0071e3;             /* Apple blue */
-  --border: rgba(15,23,42,0.15);
-}
-.dark-theme {
-  --bg: #0b0b0c;                 /* near black */
-  --card: #16161a;               /* dark card */
-  --text: #f3f3f3;               /* light text */
-  --muted: #a0a0a0;
-  --accent: #0a84ff;
-  --border: rgba(255,255,255,0.16);
-}
+def css_with_theme():
+    """Inject CSS using palettes from palette.py"""
+    css = build_css(THEMES["Light"], THEMES["Dark"])
+    st.markdown(css, unsafe_allow_html=True)
 
-/* Apply everywhere */
-html, body, .stApp, [data-testid="stAppViewContainer"] {
-  background: var(--bg) !important;
-  color: var(--text) !important;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-}
-
-/* Header */
-[data-testid="stHeader"] {
-  background: var(--bg) !important;
-  border-bottom: 1px solid var(--border);
-}
-h1, h2, h3, .stMarkdown, .stText, .stCaption, label, p, span, div {
-  color: var(--text) !important;
-}
-small, .muted { color: var(--muted) !important; }
-.block-container { padding-top: 1rem !important; }
-
-/* Cards / widgets */
-section.main > div { border-radius: 18px; }
-.stButton>button, .stDownloadButton>button {
-  border-radius: 12px;
-  padding: 8px 14px;
-  border: 1px solid var(--border);
-  background: var(--card);
-  color: var(--text);
-}
-.stButton>button:hover, .stDownloadButton>button:hover { border-color: var(--accent); }
-
-/* Language & theme pills */
-.header-row { display:flex; align-items:center; gap:1rem; margin-bottom:.5rem; }
-.header-row .grow { flex:1; }
-.header-pill {
-  display:inline-flex; gap:6px; align-items:center; padding:6px 10px;
-  border-radius:999px; background: var(--card);
-  border:1px solid var(--border); color: var(--text);
-}
-
-/* File uploader: make text readable + box visible */
-[data-testid="stFileUploader"] * { color: var(--text) !important; }
-[data-testid="stFileUploader"] [data-testid="stFileUploaderDropzone"] {
-  background: var(--card) !important;
-  color: var(--text) !important;
-  border: 1px solid var(--border) !important;
-  border-radius: 14px !important;
-}
-[data-testid="stFileUploader"] [data-testid="stFileUploaderDropzone"] div {
-  color: var(--text) !important;
-}
-</style>
-"""
-
-def set_theme_class(theme_choice: str):
+def apply_theme_class(theme_choice: str):
     theme_class = "dark-theme" if theme_choice == "Dark" else "light-theme"
-    st.markdown(
-        BASE_CSS + f"<script>document.documentElement.className='{theme_class}';</script>",
-        unsafe_allow_html=True
-    )
+    st.markdown(f"<script>document.documentElement.className='{theme_class}';</script>", unsafe_allow_html=True)
 
-# -------------------------------
-# Helpers: persistence (cookie/session)
-# -------------------------------
 def get_cookie_manager():
     return CookieManager() if COOKIE_OK else None
 
 def read_pref(cm, key, default):
     if cm:
         try:
-            val = cm.get(key)
-            if val:
-                return val
+            v = cm.get(key)
+            if v:
+                return v
         except Exception:
             pass
     return st.session_state.get(key, default)
@@ -190,9 +112,6 @@ def write_pref(cm, key, val):
         except Exception:
             pass
 
-# -------------------------------
-# Core: load reference and process
-# -------------------------------
 @st.cache_data(show_spinner=False)
 def load_reference(ref_path: str):
     if not os.path.exists(ref_path):
@@ -203,9 +122,8 @@ def load_reference(ref_path: str):
     needed = ["sku", "model", "raw_model"]
     if any(c not in cols_lower for c in needed):
         raise ValueError("REF_BAD_SCHEMA")
-    df["sku"] = df["sku"].astype(str).fillna("").str.strip()
-    df["model"] = df["model"].astype(str).fillna("").str.strip()
-    df["raw_model"] = df["raw_model"].astype(str).fillna("").str.strip()
+    for col in needed:
+        df[col] = df[col].astype(str).fillna("").str.strip()
     return df
 
 def process(raw_df: pd.DataFrame, ref_df: pd.DataFrame) -> pd.DataFrame:
@@ -216,7 +134,6 @@ def process(raw_df: pd.DataFrame, ref_df: pd.DataFrame) -> pd.DataFrame:
     df_raw = pd.DataFrame({"raw_name": raw_df.iloc[:, 0].astype(str).fillna("")})
     df_sku = ref_df
 
-    # Precompute lowercase lists/maps
     sku_list = df_sku["sku"].astype(str).tolist()
     sku_list_l = [s.lower() for s in sku_list]
     model_map_l = dict(zip(sku_list_l, df_sku["model"].astype(str)))
@@ -267,17 +184,13 @@ def make_output_bytes(df: pd.DataFrame) -> bytes:
     df.to_excel(bio, index=False)
     return bio.getvalue()
 
-# -------------------------------
-# App
-# -------------------------------
 def main():
     try:
         cm = get_cookie_manager()
 
-        # Preferences (language + theme)
+        # Preferences
         lang_default = "EN"
         theme_default = "Dark"
-
         lang = read_pref(cm, "pref_lang", lang_default)
         if lang not in ("EN", "RU"):
             lang = lang_default
@@ -285,14 +198,14 @@ def main():
         if theme_choice not in ("Dark", "Light"):
             theme_choice = theme_default
 
-        # Apply CSS/theme FIRST so header is readable
-        set_theme_class(theme_choice)
+        # Apply CSS + theme BEFORE UI
+        css_with_theme()
+        apply_theme_class(theme_choice)
         t = TXT[lang]
 
-        # Header row
+        # Header & toggles
         st.markdown(
-            f"<div class='header-row'>"
-            f"<div class='grow'><h1>{t['title']}</h1>"
+            f"<div class='header-row'><div class='grow'><h1>{t['title']}</h1>"
             f"<div class='muted'>{t['subtitle']}</div></div>",
             unsafe_allow_html=True
         )
@@ -305,17 +218,12 @@ def main():
                                  index=0 if theme_choice == "Dark" else 1, horizontal=True, key="theme_radio")
         st.markdown("</div>", unsafe_allow_html=True)
 
-        # Persist changes
         if new_lang != lang:
-            write_pref(cm, "pref_lang", new_lang)
-            st.rerun()
+            write_pref(cm, "pref_lang", new_lang); st.rerun()
         if new_theme != theme_choice:
-            write_pref(cm, "pref_theme", new_theme)
-            st.rerun()
+            write_pref(cm, "pref_theme", new_theme); st.rerun()
 
-        # Rebind translations after possible rerun
         t = TXT[read_pref(cm, "pref_lang", lang_default)]
-
         st.caption(f"📝 {t['tmpl_note']}")
         st.download_button(t["download_tmpl"], data=make_template_bytes(), file_name="raw_names_input.xlsx")
 
@@ -323,7 +231,6 @@ def main():
         st.write(f"**{t['upload_label']}**")
         up = st.file_uploader(" ", type=["xlsx"], accept_multiple_files=False, label_visibility="collapsed")
 
-        # Load reference (fail fast with friendly error)
         try:
             ref = load_reference(REF_FILE)
             st.caption("ℹ️ " + t["using_ref"].format(name=REF_FILE, rows=len(ref)))
@@ -340,7 +247,7 @@ def main():
             if up is None:
                 st.warning(t["upload_label"]); st.stop()
             try:
-                raw_df = pd.read_excel(up, sheet_name=0)  # first sheet only
+                raw_df = pd.read_excel(up, sheet_name=0)
                 with st.spinner("Processing..."):
                     df_out = process(raw_df, ref)
                 st.success(t["ok_done"].format(n=len(df_out)))
@@ -353,10 +260,7 @@ def main():
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 )
             except ValueError as ve:
-                if str(ve) == "BAD_HEADER":
-                    st.error(t["err_header"])
-                else:
-                    st.error(f"{t['err_generic']}: {ve}")
+                st.error(t["err_header"] if str(ve) == "BAD_HEADER" else f"{t['err_generic']}: {ve}")
             except Exception as e:
                 st.error(f"{t['err_generic']}: {e}")
                 st.exception(e)
