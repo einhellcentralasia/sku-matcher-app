@@ -4,21 +4,24 @@
 # =========================
 # SKU/Model Matcher — Streamlit App
 # =========================
-# Logic in this file; colors live in palette.py
+# - Colors live in palette.py
+# - Robust runtime theme switch via components.html (adds class on <html>)
+# - High-contrast uploader
+# - EN/RU toggle with cookie/session
 
 import os
 os.environ["STREAMLIT_HOME"] = "/tmp"
 
 import io
-import sys
 import traceback
 import pandas as pd
 import streamlit as st
+from streamlit.components.v1 import html as components_html
 
-# theme/palette
-from palette import THEMES, build_css  # <-- centralized colors
+# Theme palettes & CSS builder
+from palette import THEMES, build_css
 
-# Optional cookie persistence; app still works without it
+# Optional cookie persistence
 try:
     from streamlit_extras.cookie_manager import CookieManager
     COOKIE_OK = True
@@ -82,15 +85,6 @@ TXT = {
     }
 }
 
-def css_with_theme():
-    """Inject CSS using palettes from palette.py"""
-    css = build_css(THEMES["Light"], THEMES["Dark"])
-    st.markdown(css, unsafe_allow_html=True)
-
-def apply_theme_class(theme_choice: str):
-    theme_class = "dark-theme" if theme_choice == "Dark" else "light-theme"
-    st.markdown(f"<script>document.documentElement.className='{theme_class}';</script>", unsafe_allow_html=True)
-
 def get_cookie_manager():
     return CookieManager() if COOKIE_OK else None
 
@@ -112,6 +106,7 @@ def write_pref(cm, key, val):
         except Exception:
             pass
 
+# ---------- Data ----------
 @st.cache_data(show_spinner=False)
 def load_reference(ref_path: str):
     if not os.path.exists(ref_path):
@@ -122,8 +117,8 @@ def load_reference(ref_path: str):
     needed = ["sku", "model", "raw_model"]
     if any(c not in cols_lower for c in needed):
         raise ValueError("REF_BAD_SCHEMA")
-    for col in needed:
-        df[col] = df[col].astype(str).fillna("").str.strip()
+    for c in needed:
+        df[c] = df[c].astype(str).fillna("").str.strip()
     return df
 
 def process(raw_df: pd.DataFrame, ref_df: pd.DataFrame) -> pd.DataFrame:
@@ -132,35 +127,33 @@ def process(raw_df: pd.DataFrame, ref_df: pd.DataFrame) -> pd.DataFrame:
         raise ValueError("BAD_HEADER")
 
     df_raw = pd.DataFrame({"raw_name": raw_df.iloc[:, 0].astype(str).fillna("")})
-    df_sku = ref_df
-
-    sku_list = df_sku["sku"].astype(str).tolist()
+    sku_list = ref_df["sku"].astype(str).tolist()
     sku_list_l = [s.lower() for s in sku_list]
-    model_map_l = dict(zip(sku_list_l, df_sku["model"].astype(str)))
+    model_map_l = dict(zip(sku_list_l, ref_df["model"].astype(str)))
 
-    raw_models = df_sku["raw_model"].astype(str).tolist()
+    raw_models = ref_df["raw_model"].astype(str).tolist()
     raw_models_l = [rm.lower() for rm in raw_models]
-    rm_to_sku = dict(zip(raw_models_l, df_sku["sku"].astype(str)))
-    rm_to_model = dict(zip(raw_models_l, df_sku["model"].astype(str)))
+    rm_to_sku   = dict(zip(raw_models_l, ref_df["sku"].astype(str)))
+    rm_to_model = dict(zip(raw_models_l, ref_df["model"].astype(str)))
 
     found_skus, found_models = [], []
 
-    # Pass 1: SKU (case-insensitive substring)
+    # Pass 1: SKU
     for name in df_raw["raw_name"]:
         nm = str(name).lower()
-        hit_sku = None
+        hit = None
         for sku_l, sku_orig in zip(sku_list_l, sku_list):
             if sku_l and sku_l in nm:
-                hit_sku = sku_orig
+                hit = sku_orig
                 break
-        if hit_sku:
-            found_skus.append(hit_sku)
-            found_models.append(model_map_l[hit_sku.lower()])
+        if hit:
+            found_skus.append(hit)
+            found_models.append(model_map_l[hit.lower()])
         else:
             found_skus.append("not found")
             found_models.append("not found")
 
-    # Pass 2: raw_model if no SKU found
+    # Pass 2: raw_model
     for i, nm in enumerate(df_raw["raw_name"].astype(str).str.lower()):
         if found_skus[i] == "not found":
             for rm_l in raw_models_l:
@@ -184,23 +177,42 @@ def make_output_bytes(df: pd.DataFrame) -> bytes:
     df.to_excel(bio, index=False)
     return bio.getvalue()
 
+# ---------- Theme helpers (robust) ----------
+def inject_css_once():
+    """Inject the CSS with both palettes. Call once before UI."""
+    st.markdown(build_css(THEMES["Light"], THEMES["Dark"]), unsafe_allow_html=True)
+
+def apply_theme(theme_choice: str):
+    """Reliably set class on <html> using a sandboxed component."""
+    cls = "dark-theme" if theme_choice == "Dark" else "light-theme"
+    components_html(
+        f"""
+        <script>
+        const cls = "{cls}";
+        const root = document.documentElement;
+        root.classList.remove("dark-theme","light-theme");
+        root.classList.add(cls);
+        </script>
+        """,
+        height=0,
+    )
+
+# ---------- App ----------
 def main():
     try:
         cm = get_cookie_manager()
 
         # Preferences
-        lang_default = "EN"
-        theme_default = "Dark"
-        lang = read_pref(cm, "pref_lang", lang_default)
+        lang = read_pref(cm, "pref_lang", "EN")
         if lang not in ("EN", "RU"):
-            lang = lang_default
-        theme_choice = read_pref(cm, "pref_theme", theme_default)
+            lang = "EN"
+        theme_choice = read_pref(cm, "pref_theme", "Dark")
         if theme_choice not in ("Dark", "Light"):
-            theme_choice = theme_default
+            theme_choice = "Dark"
 
-        # Apply CSS + theme BEFORE UI
-        css_with_theme()
-        apply_theme_class(theme_choice)
+        # Apply CSS + theme BEFORE any UI
+        inject_css_once()
+        apply_theme(theme_choice)
         t = TXT[lang]
 
         # Header & toggles
@@ -211,19 +223,20 @@ def main():
         )
         col_lang, col_theme = st.columns([0.12, 0.12])
         with col_lang:
-            new_lang = st.radio(t["lang"], options=["EN", "RU"],
-                                index=0 if lang == "EN" else 1, horizontal=True, key="lang_radio")
+            new_lang = st.radio(t["lang"], ["EN", "RU"], index=0 if lang=="EN" else 1, horizontal=True, key="lang_radio")
         with col_theme:
-            new_theme = st.radio(t["theme"], options=["Dark", "Light"],
-                                 index=0 if theme_choice == "Dark" else 1, horizontal=True, key="theme_radio")
+            new_theme = st.radio(t["theme"], ["Dark", "Light"], index=0 if theme_choice=="Dark" else 1, horizontal=True, key="theme_radio")
         st.markdown("</div>", unsafe_allow_html=True)
 
+        # Persist & rerun if changed
         if new_lang != lang:
             write_pref(cm, "pref_lang", new_lang); st.rerun()
         if new_theme != theme_choice:
             write_pref(cm, "pref_theme", new_theme); st.rerun()
 
-        t = TXT[read_pref(cm, "pref_lang", lang_default)]
+        # Rebind after possible rerun
+        t = TXT[read_pref(cm, "pref_lang", "EN")]
+
         st.caption(f"📝 {t['tmpl_note']}")
         st.download_button(t["download_tmpl"], data=make_template_bytes(), file_name="raw_names_input.xlsx")
 
