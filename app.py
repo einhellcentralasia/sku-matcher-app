@@ -11,8 +11,9 @@
 # - Robust error handling up-front
 # - Clear success logs when done
 
-import io
 import os
+os.environ["STREAMLIT_HOME"] = "/tmp"
+import io
 import sys
 import traceback
 import pandas as pd
