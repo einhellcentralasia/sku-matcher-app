@@ -12,7 +12,7 @@ THEMES = {
     },
     "Dark": {
         "bg": "#0b0b0c",
-        "card": "#16161a",
+        "card": "#16165a",
         "text": "#f3f3f3",
         "muted": "#a0a0a0",
         "accent": "#0a84ff",
