@@ -5,7 +5,7 @@
 # SKU/Model Matcher — Streamlit App
 # =========================
 # - Colors live in palette.py
-# - Robust runtime theme switch via direct CSS injection
+# - Robust runtime theme switch via components.html (adds class on <html>)
 # - High-contrast uploader
 # - EN/RU toggle with cookie/session
 
@@ -183,30 +183,19 @@ def inject_css_once():
     st.markdown(build_css(THEMES["Light"], THEMES["Dark"]), unsafe_allow_html=True)
 
 def apply_theme(theme_choice: str):
-    """Apply theme by injecting CSS directly into the page."""
+    """Reliably set class on <html> using a sandboxed component."""
     cls = "dark-theme" if theme_choice == "Dark" else "light-theme"
-    
-    # Use st.markdown with unsafe_allow_html to inject JavaScript that runs in the main context
-    st.markdown(f"""
-    <script>
-    (function() {{
+    components_html(
+        f"""
+        <script>
         const cls = "{cls}";
         const root = document.documentElement;
-        root.classList.remove("dark-theme", "light-theme");
+        root.classList.remove("dark-theme","light-theme");
         root.classList.add(cls);
-        
-        // Also apply to Streamlit's main container if it exists
-        const streamlitContainer = document.querySelector('[data-testid="stAppViewContainer"]');
-        if (streamlitContainer) {{
-            streamlitContainer.classList.remove("dark-theme", "light-theme");
-            streamlitContainer.classList.add(cls);
-        }}
-        
-        // Force immediate style update
-        root.style.setProperty('--theme-applied', 'true');
-    }})();
-    </script>
-    """, unsafe_allow_html=True)
+        </script>
+        """,
+        height=0,
+    )
 
 # ---------- App ----------
 def main():
