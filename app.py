@@ -5,7 +5,7 @@
 # SKU/Model Matcher — Streamlit App
 # =========================
 # - Colors live in palette.py
-# - Robust runtime theme switch via components.html (adds class on <html>)
+# - Light theme is always ON (no theme switch UI)
 # - High-contrast uploader
 # - EN/RU toggle with cookie/session
 
@@ -177,21 +177,19 @@ def make_output_bytes(df: pd.DataFrame) -> bytes:
     df.to_excel(bio, index=False)
     return bio.getvalue()
 
-# ---------- Theme helpers (robust) ----------
+# ---------- Theme helpers (Light only) ----------
 def inject_css_once():
-    """Inject the CSS with both palettes. Call once before UI."""
+    """Inject CSS (both palettes are allowed in builder; we’ll force Light below)."""
     st.markdown(build_css(THEMES["Light"], THEMES["Dark"]), unsafe_allow_html=True)
 
-def apply_theme(theme_choice: str):
-    """Reliably set class on <html> using a sandboxed component."""
-    cls = "dark-theme" if theme_choice == "Dark" else "light-theme"
+def apply_light_theme():
+    """Force Light by setting <html> class to light-theme."""
     components_html(
-        f"""
+        """
         <script>
-        const cls = "{cls}";
         const root = document.documentElement;
         root.classList.remove("dark-theme","light-theme");
-        root.classList.add(cls);
+        root.classList.add("light-theme");
         </script>
         """,
         height=0,
@@ -202,37 +200,30 @@ def main():
     try:
         cm = get_cookie_manager()
 
-        # Preferences
+        # Language preference only (theme removed)
         lang = read_pref(cm, "pref_lang", "EN")
         if lang not in ("EN", "RU"):
             lang = "EN"
-        theme_choice = read_pref(cm, "pref_theme", "Dark")
-        if theme_choice not in ("Dark", "Light"):
-            theme_choice = "Dark"
 
-        # Apply CSS + theme BEFORE any UI
+        # Apply CSS + force Light BEFORE any UI
         inject_css_once()
-        apply_theme(theme_choice)
+        apply_light_theme()
         t = TXT[lang]
 
-        # Header & toggles
+        # Header (only language toggle now)
         st.markdown(
             f"<div class='header-row'><div class='grow'><h1>{t['title']}</h1>"
             f"<div class='muted'>{t['subtitle']}</div></div>",
             unsafe_allow_html=True
         )
-        col_lang, col_theme = st.columns([0.12, 0.12])
+        col_lang, _ = st.columns([0.12, 0.88])
         with col_lang:
             new_lang = st.radio(t["lang"], ["EN", "RU"], index=0 if lang=="EN" else 1, horizontal=True, key="lang_radio")
-        with col_theme:
-            new_theme = st.radio(t["theme"], ["Dark", "Light"], index=0 if theme_choice=="Dark" else 1, horizontal=True, key="theme_radio")
         st.markdown("</div>", unsafe_allow_html=True)
 
         # Persist & rerun if changed
         if new_lang != lang:
             write_pref(cm, "pref_lang", new_lang); st.rerun()
-        if new_theme != theme_choice:
-            write_pref(cm, "pref_theme", new_theme); st.rerun()
 
         # Rebind after possible rerun
         t = TXT[read_pref(cm, "pref_lang", "EN")]
