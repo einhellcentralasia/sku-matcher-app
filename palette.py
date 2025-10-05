@@ -41,9 +41,7 @@ def build_css(light: dict, dark: dict) -> str:
   --border: {dark['border']};
 }}
 
-/* Apply theme to all possible Streamlit containers */
-html, body, .stApp, [data-testid="stAppViewContainer"], 
-[data-testid="stAppViewContainer"] > div {{
+html, body, .stApp, [data-testid="stAppViewContainer"] {{
   background: var(--bg) !important;
   color: var(--text) !important;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -54,158 +52,41 @@ html, body, .stApp, [data-testid="stAppViewContainer"],
   border-bottom: 1px solid var(--border);
 }}
 
-/* Target all text elements more aggressively */
-h1, h2, h3, h4, h5, h6, .stMarkdown, .stText, .stCaption, 
-label, p, span, div, .stSelectbox label, .stTextInput label,
-.stTextArea label, .stNumberInput label, .stDateInput label,
-.stTimeInput label, .stFileUploader label {{
+h1, h2, h3, .stMarkdown, .stText, .stCaption, label, p, span, div {{
   color: var(--text) !important;
 }}
+small, .muted {{ color: var(--muted) !important; }}
 
-small, .muted, .stCaption {{
-  color: var(--muted) !important;
-}}
+.block-container {{ padding-top: 1rem !important; }}
+section.main > div {{ border-radius: 18px; }}
 
-.block-container {{ 
-  padding-top: 1rem !important;
-  background: var(--bg) !important;
-}}
-
-section.main > div {{ 
-  border-radius: 18px;
-  background: var(--bg) !important;
-}}
-
-/* Enhanced button styling */
 .stButton>button, .stDownloadButton>button {{
   border-radius: 12px;
   padding: 8px 14px;
   border: 1px solid var(--border);
   background: var(--card);
-  color: var(--text) !important;
+  color: var(--text);
+}}
+.stButton>button:hover, .stDownloadButton>button:hover {{ border-color: var(--accent); }}
+
+.header-row {{ display:flex; align-items:center; gap:1rem; margin-bottom:.5rem; }}
+.header-row .grow {{ flex:1; }}
+.header-pill {{
+  display:inline-flex; gap:6px; align-items:center; padding:6px 10px;
+  border-radius:999px; background: var(--card);
+  border:1px solid var(--border); color: var(--text);
 }}
 
-.stButton>button:hover, .stDownloadButton>button:hover {{ 
-  border-color: var(--accent);
-  background: var(--card);
-}}
-
-/* Radio button styling */
-.stRadio > div > label > div > div {{
-  background: var(--card) !important;
-  color: var(--text) !important;
-  border: 1px solid var(--border) !important;
-}}
-
-.stRadio > div > label > div > div[data-testid="stMarkdownContainer"] {{
-  color: var(--text) !important;
-}}
-
-/* File uploader styling */
-[data-testid="stFileUploader"] * {{ 
-  color: var(--text) !important; 
-}}
-
+/* File uploader — контрастный, читаемый */
+[data-testid="stFileUploader"] * {{ color: var(--text) !important; }}
 [data-testid="stFileUploader"] [data-testid="stFileUploaderDropzone"] {{
   background: var(--card) !important;
   color: var(--text) !important;
   border: 1px solid var(--border) !important;
   border-radius: 14px !important;
 }}
-
 [data-testid="stFileUploader"] [data-testid="stFileUploaderDropzone"] div {{
   color: var(--text) !important;
-}}
-
-.header-row {{ 
-  display:flex; 
-  align-items:center; 
-  gap:1rem; 
-  margin-bottom:.5rem; 
-}}
-
-.header-row .grow {{ 
-  flex:1; 
-}}
-
-.header-pill {{
-  display:inline-flex; 
-  gap:6px; 
-  align-items:center; 
-  padding:6px 10px;
-  border-radius:999px; 
-  background: var(--card);
-  border:1px solid var(--border); 
-  color: var(--text);
-}}
-
-/* Ensure sidebar follows theme */
-.css-1d391kg {{
-  background: var(--bg) !important;
-}}
-
-/* Force Streamlit widgets to use theme colors */
-.stSelectbox, .stTextInput, .stTextArea, .stNumberInput, .stDateInput, .stTimeInput {{
-  background: var(--card) !important;
-  color: var(--text) !important;
-}}
-
-.stSelectbox > div > div {{
-  background: var(--card) !important;
-  color: var(--text) !important;
-}}
-
-/* Dataframe styling */
-.stDataFrame {{
-  background: var(--card) !important;
-  color: var(--text) !important;
-}}
-
-.stDataFrame table {{
-  background: var(--card) !important;
-  color: var(--text) !important;
-}}
-
-.stDataFrame th, .stDataFrame td {{
-  background: var(--card) !important;
-  color: var(--text) !important;
-  border-color: var(--border) !important;
-}}
-
-/* Additional Streamlit component styling */
-.stSuccess, .stError, .stWarning, .stInfo {{
-  background: var(--card) !important;
-  color: var(--text) !important;
-  border: 1px solid var(--border) !important;
-}}
-
-/* Spinner styling */
-.stSpinner {{
-  color: var(--accent) !important;
-}}
-
-/* Divider styling */
-hr {{
-  border-color: var(--border) !important;
-}}
-
-/* Input field styling */
-.stTextInput > div > div > input {{
-  background: var(--card) !important;
-  color: var(--text) !important;
-  border: 1px solid var(--border) !important;
-}}
-
-.stTextArea > div > div > textarea {{
-  background: var(--card) !important;
-  color: var(--text) !important;
-  border: 1px solid var(--border) !important;
-}}
-
-.stSelectbox > div > div > select {{
-  background: var(--card) !important;
-  color: var(--text) !important;
-  border: 1px solid var(--border) !important;
 }}
 </style>
 """
