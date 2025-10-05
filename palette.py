@@ -50,7 +50,7 @@ h1, h2, h3, .stMarkdown, .stText, .stCaption, label, p, span, div {{
 }}
 small, .muted {{ color: var(--muted) !important; }}
 
-.block-container {{ padding-top: 1rem !important; }}
+.block-container {{ padding-top: 1.5rem !important; }}
 section.main > div {{ border-radius: 18px; }}
 
 .stButton>button, .stDownloadButton>button {{
