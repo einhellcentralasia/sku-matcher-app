@@ -8,22 +8,15 @@ THEMES = {
         "text": "#0f172a",
         "muted": "#475569",
         "accent": "#0071e3",
-        "border": "rgba(15,23,42,0.15)"
-    },
-    "Dark": {
-        "bg": "#0b0b0c",
-        "card": "#16161a",
-        "text": "#f3f3f3",
-        "muted": "#a0a0a0",
-        "accent": "#0a84ff",
-        "border": "rgba(255,255,255,0.16)"
+        "border": "rgba(15,23,42,0.15)",
     }
 }
 
-def build_css(light: dict, dark: dict) -> str:
-    """Return CSS with both palettes; actual pick is done by the class on <html>."""
+def build_css(light: dict) -> str:
+    """Return CSS for the single (light) palette."""
     return f"""
 <style>
+/* Expose CSS variables for the app */
 :root, .light-theme {{
   --bg: {light['bg']};
   --card: {light['card']};
@@ -31,14 +24,6 @@ def build_css(light: dict, dark: dict) -> str:
   --muted: {light['muted']};
   --accent: {light['accent']};
   --border: {light['border']};
-}}
-.dark-theme {{
-  --bg: {dark['bg']};
-  --card: {dark['card']};
-  --text: {dark['text']};
-  --muted: {dark['muted']};
-  --accent: {dark['accent']};
-  --border: {dark['border']};
 }}
 
 html, body, .stApp, [data-testid="stAppViewContainer"] {{
@@ -77,7 +62,7 @@ section.main > div {{ border-radius: 18px; }}
   border:1px solid var(--border); color: var(--text);
 }}
 
-/* File uploader — контрастный, читаемый */
+/* File uploader — readable and consistent */
 [data-testid="stFileUploader"] * {{ color: var(--text) !important; }}
 [data-testid="stFileUploader"] [data-testid="stFileUploaderDropzone"] {{
   background: var(--card) !important;
