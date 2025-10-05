@@ -4,10 +4,10 @@
 # =========================
 # SKU/Model Matcher — Streamlit App
 # =========================
-# - Colors live in palette.py
-# - Light theme is always ON (no theme switch UI)
-# - High-contrast uploader
+# - Uses single light theme from palette.py
+# - Clean, minimal Apple-like design
 # - EN/RU toggle with cookie/session
+# - No theme switching
 
 import os
 os.environ["STREAMLIT_HOME"] = "/tmp"
@@ -16,9 +16,8 @@ import io
 import traceback
 import pandas as pd
 import streamlit as st
-from streamlit.components.v1 import html as components_html
 
-# Theme palettes & CSS builder
+# Import centralized colors
 from palette import THEMES, build_css
 
 # Optional cookie persistence
@@ -34,6 +33,9 @@ REF_FILE = "sku_model_list.xlsx"
 
 st.set_page_config(page_title=APP_TITLE, layout="wide")
 
+# -------------------------------
+# i18n (EN / RU text)
+# -------------------------------
 TXT = {
     "EN": {
         "title": "SKU / Model Matcher",
@@ -50,9 +52,6 @@ TXT = {
         "err_ref_missing": "Reference file `sku_model_list.xlsx` not found in the app folder.",
         "err_ref_schema": "Reference file must have columns: sku, model, raw_model (first sheet).",
         "lang": "Language",
-        "theme": "Theme",
-        "dark": "Dark",
-        "light": "Light",
         "en": "EN",
         "ru": "RU",
         "helper": "Tip: drag & drop your file above, then click Process.",
@@ -74,9 +73,6 @@ TXT = {
         "err_ref_missing": "Файл справочника `sku_model_list.xlsx` не найден в папке приложения.",
         "err_ref_schema": "В справочнике должны быть колонки: sku, model, raw_model (первый лист).",
         "lang": "Язык",
-        "theme": "Тема",
-        "dark": "Тёмная",
-        "light": "Светлая",
         "en": "АНГ",
         "ru": "РУС",
         "helper": "Подсказка: перетащите файл выше и нажмите Обработать.",
@@ -85,6 +81,9 @@ TXT = {
     }
 }
 
+# -------------------------------
+# Helpers for cookies
+# -------------------------------
 def get_cookie_manager():
     return CookieManager() if COOKIE_OK else None
 
@@ -106,7 +105,9 @@ def write_pref(cm, key, val):
         except Exception:
             pass
 
-# ---------- Data ----------
+# -------------------------------
+# Data logic
+# -------------------------------
 @st.cache_data(show_spinner=False)
 def load_reference(ref_path: str):
     if not os.path.exists(ref_path):
@@ -138,7 +139,7 @@ def process(raw_df: pd.DataFrame, ref_df: pd.DataFrame) -> pd.DataFrame:
 
     found_skus, found_models = [], []
 
-    # Pass 1: SKU
+    # Pass 1: SKU detection
     for name in df_raw["raw_name"]:
         nm = str(name).lower()
         hit = None
@@ -153,7 +154,7 @@ def process(raw_df: pd.DataFrame, ref_df: pd.DataFrame) -> pd.DataFrame:
             found_skus.append("not found")
             found_models.append("not found")
 
-    # Pass 2: raw_model
+    # Pass 2: raw_model detection
     for i, nm in enumerate(df_raw["raw_name"].astype(str).str.lower()):
         if found_skus[i] == "not found":
             for rm_l in raw_models_l:
@@ -177,56 +178,45 @@ def make_output_bytes(df: pd.DataFrame) -> bytes:
     df.to_excel(bio, index=False)
     return bio.getvalue()
 
-# ---------- Theme helpers (Light only) ----------
+# -------------------------------
+# Apply global CSS
+# -------------------------------
 def inject_css_once():
-    """Inject CSS (both palettes are allowed in builder; we’ll force Light below)."""
-    st.markdown(build_css(THEMES["Light"], THEMES["Dark"]), unsafe_allow_html=True)
+    st.markdown(build_css(THEMES["Light"]), unsafe_allow_html=True)
 
-def apply_light_theme():
-    """Force Light by setting <html> class to light-theme."""
-    components_html(
-        """
-        <script>
-        const root = document.documentElement;
-        root.classList.remove("dark-theme","light-theme");
-        root.classList.add("light-theme");
-        </script>
-        """,
-        height=0,
-    )
-
-# ---------- App ----------
+# -------------------------------
+# App main
+# -------------------------------
 def main():
     try:
         cm = get_cookie_manager()
 
-        # Language preference only (theme removed)
+        # Language preference (default EN)
         lang = read_pref(cm, "pref_lang", "EN")
         if lang not in ("EN", "RU"):
             lang = "EN"
 
-        # Apply CSS + force Light BEFORE any UI
         inject_css_once()
-        apply_light_theme()
         t = TXT[lang]
 
-        # Header (only language toggle now)
+        # Header and language toggle
         st.markdown(
             f"<div class='header-row'><div class='grow'><h1>{t['title']}</h1>"
             f"<div class='muted'>{t['subtitle']}</div></div>",
             unsafe_allow_html=True
         )
-        col_lang, _ = st.columns([0.12, 0.88])
+        col_lang, _ = st.columns([0.2, 0.8])
         with col_lang:
-            new_lang = st.radio(t["lang"], ["EN", "RU"], index=0 if lang=="EN" else 1, horizontal=True, key="lang_radio")
+            new_lang = st.radio(t["lang"], ["EN", "RU"], index=0 if lang == "EN" else 1, horizontal=True, key="lang_radio")
         st.markdown("</div>", unsafe_allow_html=True)
 
-        # Persist & rerun if changed
+        # Save lang pref if changed
         if new_lang != lang:
-            write_pref(cm, "pref_lang", new_lang); st.rerun()
+            write_pref(cm, "pref_lang", new_lang)
+            st.rerun()
 
-        # Rebind after possible rerun
-        t = TXT[read_pref(cm, "pref_lang", "EN")]
+        # Reload correct language
+        t = TXT[new_lang]
 
         st.caption(f"📝 {t['tmpl_note']}")
         st.download_button(t["download_tmpl"], data=make_template_bytes(), file_name="raw_names_input.xlsx")
@@ -235,6 +225,7 @@ def main():
         st.write(f"**{t['upload_label']}**")
         up = st.file_uploader(" ", type=["xlsx"], accept_multiple_files=False, label_visibility="collapsed")
 
+        # Load reference
         try:
             ref = load_reference(REF_FILE)
             st.caption("ℹ️ " + t["using_ref"].format(name=REF_FILE, rows=len(ref)))
