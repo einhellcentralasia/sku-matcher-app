@@ -105,6 +105,11 @@ function mapErrorMessage(code, dict) {
   }
 }
 
+function toggleLang() {
+  const next = currentLang === "en" ? "ru" : "en";
+  setLang(next);
+}
+
 async function handleProcess() {
   const dict = STRINGS[currentLang];
   const file = els.fileInput.files[0];
@@ -134,6 +139,7 @@ async function handleProcess() {
     latestRows = payload.rows || [];
     els.downloadBtn.disabled = false;
     setStatus(dict.statusDone(latestRows.length), "success");
+    downloadOutput();
   } catch (err) {
     setStatus(`${dict.statusError} ${err.message}`, "error");
   } finally {
@@ -179,9 +185,13 @@ function init() {
   setTheme(savedTheme || "dark");
   setLang(savedLang || "en");
 
-  document.querySelectorAll("[data-lang]").forEach((btn) => {
-    btn.addEventListener("click", () => setLang(btn.dataset.lang));
-  });
+  const langToggle = document.querySelector(".lang-toggle");
+  if (langToggle) {
+    langToggle.addEventListener("click", (e) => {
+      e.preventDefault();
+      toggleLang();
+    });
+  }
 
   els.themeToggle.addEventListener("click", () => {
     setTheme(currentTheme === "dark" ? "light" : "dark");

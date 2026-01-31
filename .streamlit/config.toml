@@ -1,8 +1,0 @@
-[server]
-headless = true
-port = 8501
-enableCORS = false
-enableXsrfProtection = false
-# Force Streamlit to write its metrics under /tmp (not the locked root)
-browser.gatherUsageStats = false
-folderWatcherBlacklist = ["/"]
