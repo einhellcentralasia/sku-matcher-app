@@ -2,15 +2,18 @@ const STRINGS = {
   en: {
     title: "SKU / Model Matcher",
     subtitle: "Upload → Process → Download",
-    stepTitle: "Step 1. Upload input",
-    stepHint: "Use the template: first sheet, single column header raw_name.",
+    stepTitle: "Upload file",
+    stepHint: "First sheet, single column header raw_name.",
     processBtn: "Process",
-    downloadTitle: "Template",
-    downloadHint: "Download an empty template.",
-    downloadBtn: "Download template",
-    mappingTitle: "Mapping file",
-    mappingHint: "The app uses sku_model_list.xlsx from this repo.",
-    mappingBtn: "Download mapping",
+    downloadTitle: "Step 1. Download sample",
+    downloadHint: "Download the sample file and fill raw_name.",
+    downloadBtn: "Download sample",
+    fillTitle: "Step 2. Fill raw_name",
+    fillHint: "Add models into the column header raw_name.",
+    fillExample: "Example: Model A 23 - Li Solo",
+    uploadTitle: "Step 3. Upload & download",
+    uploadHint: "Upload the file and download the output.",
+    uploadBtn: "Go to upload",
     resultsTitle: "Results",
     downloadOutput: "Download output.xlsx",
     colRaw: "raw_name",
@@ -28,15 +31,18 @@ const STRINGS = {
   ru: {
     title: "Сопоставление SKU / Модели",
     subtitle: "Загрузка → Обработка → Скачивание",
-    stepTitle: "Шаг 1. Загрузите файл",
-    stepHint: "Используйте шаблон: первый лист, одна колонка raw_name.",
+    stepTitle: "Загрузка файла",
+    stepHint: "Первый лист, одна колонка raw_name.",
     processBtn: "Обработать",
-    downloadTitle: "Шаблон",
-    downloadHint: "Скачать пустой шаблон.",
+    downloadTitle: "Шаг 1. Скачать шаблон",
+    downloadHint: "Скачайте шаблон и заполните raw_name.",
     downloadBtn: "Скачать шаблон",
-    mappingTitle: "Файл сопоставления",
-    mappingHint: "Используется sku_model_list.xlsx из репозитория.",
-    mappingBtn: "Скачать сопоставление",
+    fillTitle: "Шаг 2. Заполнить raw_name",
+    fillHint: "Добавьте модели в колонку raw_name.",
+    fillExample: "Пример: Model A 23 - Li Solo",
+    uploadTitle: "Шаг 3. Загрузка и скачивание",
+    uploadHint: "Загрузите файл и скачайте результат.",
+    uploadBtn: "Перейти к загрузке",
     resultsTitle: "Результаты",
     downloadOutput: "Скачать output.xlsx",
     colRaw: "raw_name",
@@ -68,6 +74,8 @@ const els = {
   downloadBtn: document.getElementById("downloadBtn"),
   templateBtn: document.getElementById("templateBtn"),
   themeToggle: document.getElementById("themeToggle"),
+  scrollUploadBtn: document.getElementById("scrollUploadBtn"),
+  uploadSection: document.getElementById("uploadSection"),
 };
 
 let currentLang = "en";
@@ -228,6 +236,11 @@ function init() {
   els.processBtn.addEventListener("click", handleProcess);
   els.downloadBtn.addEventListener("click", downloadOutput);
   els.templateBtn.addEventListener("click", downloadTemplate);
+  if (els.scrollUploadBtn && els.uploadSection) {
+    els.scrollUploadBtn.addEventListener("click", () => {
+      els.uploadSection.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }
 }
 
 window.addEventListener("DOMContentLoaded", init);

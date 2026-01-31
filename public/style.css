@@ -1,28 +1,32 @@
 :root{
-  --bg:#1b1e23;
-  --bg2:#20242c;
-  --card:#262a30;
-  --text:#ececef;
-  --muted:#aeb3bd;
-  --accent:#d32f2f;
-  --border:rgba(255,255,255,0.10);
+  --bg:#262626;
+  --bg2:#262626;
+  --card:#4c4c4c;
+  --card-strong:#7f7f8c;
+  --text:#ffffff;
+  --muted:#b2b2b2;
+  --accent:#cc4c3f;
+  --accent-dark:#993326;
+  --border:#7f7f8c;
   --shadow:0 10px 30px rgba(0,0,0,0.28);
   --radius:16px;
-  --input:#191c21;
-  --inputText:#ececef;
+  --input:#4c4c4c;
+  --inputText:#ffffff;
 }
 
 html[data-theme="light"]{
   --bg:#ffffff;
-  --bg2:#f5f5f7;
-  --card:#f8f9fb;
-  --text:#1c1c1e;
-  --muted:#6b7280;
-  --accent:#d32f2f;
-  --border:#e5e7eb;
+  --bg2:#d8d8d8;
+  --card:#ffffff;
+  --card-strong:#b2b2b2;
+  --text:#262626;
+  --muted:#7f7f8c;
+  --accent:#cc4c3f;
+  --accent-dark:#993326;
+  --border:#b2b2b2;
   --shadow:0 1px 3px rgba(0,0,0,.08);
   --input:#ffffff;
-  --inputText:#111111;
+  --inputText:#262626;
 }
 
 *{box-sizing:border-box}
@@ -48,14 +52,6 @@ a{color:inherit}
 }
 
 .brand{display:flex; align-items:center; gap:12px; text-decoration:none; color:var(--text)}
-.logo-wrap{
-  background:#fff;
-  border-radius:12px;
-  padding:6px 10px;
-  display:flex;
-  align-items:center;
-  box-shadow:0 6px 16px rgba(0,0,0,0.2);
-}
 .logo{height:30px; width:auto; display:block}
 .brand-text{display:flex; flex-direction:column; gap:2px}
 .title{font-weight:700; font-size:18px; letter-spacing:.2px}
@@ -98,17 +94,17 @@ h2{margin:0 0 8px; font-size:17px; font-weight:600}
   padding:10px 12px;
   border-radius:10px;
   border:1px solid var(--border);
-  background:#33373e;
+  background:var(--card-strong);
   color:var(--text);
   font-weight:600;
   cursor:pointer;
 }
 
-html[data-theme="light"] .btn{background:#f0f2f7}
+html[data-theme="light"] .btn{background:var(--card-strong)}
 
 .btn.primary{
   background:var(--accent);
-  border-color:rgba(0,0,0,0.3);
+  border-color:var(--accent-dark);
   color:#fff;
 }
 
@@ -124,7 +120,7 @@ html[data-theme="light"] .btn{background:#f0f2f7}
   border:1px solid var(--border);
   border-radius:12px;
   overflow:auto;
-  background:#1c1f25;
+  background:var(--bg);
 }
 html[data-theme="light"] .table-wrap{background:#ffffff}
 
@@ -143,9 +139,9 @@ html[data-theme="light"] .table-wrap{background:#ffffff}
 .table th{
   color:var(--muted);
   font-weight:600;
-  background:#20242a;
+  background:var(--card-strong);
 }
-html[data-theme="light"] .table th{background:#f0f2f7}
+html[data-theme="light"] .table th{background:var(--card-strong)}
 
 .results-tick{margin-left:8px}
 
