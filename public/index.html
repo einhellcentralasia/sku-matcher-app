@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -9,21 +9,20 @@
 <body>
   <header class="topbar">
     <div class="brand">
-      <img class="logo" src="/logo.png" alt="Logo" />
+      <div class="logo-wrap">
+        <img class="logo" src="/logo.png" alt="Einhell" />
+      </div>
       <div class="brand-text">
         <span class="title" data-i18n="title">SKU / Model Matcher</span>
         <span class="subtitle" data-i18n="subtitle">Upload → Process → Download</span>
       </div>
     </div>
     <div class="topbar-links">
-      <div class="toggle">
-        <button class="toggle-btn" type="button" data-theme="dark" data-i18n="themeDark">Dark</button>
-        <button class="toggle-btn" type="button" data-theme="light" data-i18n="themeLight">Light</button>
+      <div class="pill">
+        <button class="lang-btn" type="button" data-lang="en">EN</button>
+        <button class="lang-btn" type="button" data-lang="ru">RU</button>
       </div>
-      <div class="toggle">
-        <button class="toggle-btn" type="button" data-lang="en">EN</button>
-        <button class="toggle-btn" type="button" data-lang="ru">RU</button>
-      </div>
+      <button class="toggle" id="themeToggle" type="button" aria-label="Toggle theme">☾</button>
     </div>
   </header>
 

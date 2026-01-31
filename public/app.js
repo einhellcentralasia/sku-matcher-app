@@ -11,8 +11,6 @@ const STRINGS = {
     mappingTitle: "Mapping file",
     mappingHint: "The app uses sku_model_list.xlsx from this repo.",
     mappingBtn: "Download mapping",
-    themeDark: "Dark",
-    themeLight: "Light",
     resultsTitle: "Results",
     downloadOutput: "Download output.xlsx",
     colRaw: "raw_name",
@@ -39,8 +37,6 @@ const STRINGS = {
     mappingTitle: "Файл сопоставления",
     mappingHint: "Используется sku_model_list.xlsx из репозитория.",
     mappingBtn: "Скачать сопоставление",
-    themeDark: "Темная",
-    themeLight: "Светлая",
     resultsTitle: "Результаты",
     downloadOutput: "Скачать output.xlsx",
     colRaw: "raw_name",
@@ -71,6 +67,7 @@ const els = {
   resultsTable: document.getElementById("resultsTable"),
   downloadBtn: document.getElementById("downloadBtn"),
   templateBtn: document.getElementById("templateBtn"),
+  themeToggle: document.getElementById("themeToggle"),
 };
 
 let currentLang = "en";
@@ -81,9 +78,8 @@ function setTheme(theme) {
   currentTheme = theme;
   document.documentElement.setAttribute("data-theme", theme);
   localStorage.setItem(storageKeys.theme, theme);
-  document.querySelectorAll("[data-theme]").forEach((btn) => {
-    btn.classList.toggle("is-active", btn.dataset.theme === theme);
-  });
+  const icon = theme === "dark" ? "☀" : "☾";
+  els.themeToggle.textContent = icon;
 }
 
 function setLang(lang) {
@@ -98,7 +94,7 @@ function setLang(lang) {
     }
   });
   document.querySelectorAll("[data-lang]").forEach((btn) => {
-    btn.classList.toggle("is-active", btn.dataset.lang === lang);
+    btn.classList.toggle("active", btn.dataset.lang === lang);
   });
   if (els.statusMsg.textContent) {
     els.statusMsg.textContent = dict.statusReady;
@@ -217,11 +213,12 @@ function init() {
   setTheme(savedTheme || "dark");
   setLang(savedLang || "en");
 
-  document.querySelectorAll("[data-theme]").forEach((btn) => {
-    btn.addEventListener("click", () => setTheme(btn.dataset.theme));
-  });
   document.querySelectorAll("[data-lang]").forEach((btn) => {
     btn.addEventListener("click", () => setLang(btn.dataset.lang));
+  });
+
+  els.themeToggle.addEventListener("click", () => {
+    setTheme(currentTheme === "dark" ? "light" : "dark");
   });
 
   els.fileInput.addEventListener("change", () => {
