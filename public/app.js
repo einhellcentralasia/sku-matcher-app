@@ -2,24 +2,14 @@ const STRINGS = {
   en: {
     title: "SKU / Model Matcher",
     subtitle: "Upload → Process → Download",
-    stepTitle: "Upload file",
     stepHint: "First sheet, single column header raw_name.",
     processBtn: "Process",
-    downloadTitle: "Step 1. Download sample",
-    downloadHint: "Download the sample file and fill raw_name.",
-    downloadBtn: "Download sample",
-    fillTitle: "Step 2. Fill raw_name",
-    fillHint: "Add models into the column header raw_name.",
-    fillExample: "Example: Model A 23 - Li Solo",
-    uploadTitle: "Step 3. Upload & download",
-    uploadHint: "Upload the file and download the output.",
-    uploadBtn: "Go to upload",
-    resultsTitle: "Results",
-    downloadOutput: "Download output.xlsx",
-    colRaw: "raw_name",
-    colSku: "sku",
-    colModel: "model",
-    colNote: "note",
+    downloadTitle: "Step 1. Download and fill template",
+    downloadHint: "Download the template file and fill it in.",
+    downloadBtn: "Download template",
+    uploadTitle: "Step 2. Upload and download output",
+    uploadHint: "Upload the fulfilled file and download the output file.",
+    downloadOutput: "Download output file",
     statusReady: "Ready.",
     statusProcessing: "Processing...",
     statusError: "Error:",
@@ -31,24 +21,14 @@ const STRINGS = {
   ru: {
     title: "Сопоставление SKU / Модели",
     subtitle: "Загрузка → Обработка → Скачивание",
-    stepTitle: "Загрузка файла",
     stepHint: "Первый лист, одна колонка raw_name.",
     processBtn: "Обработать",
-    downloadTitle: "Шаг 1. Скачать шаблон",
-    downloadHint: "Скачайте шаблон и заполните raw_name.",
+    downloadTitle: "Шаг 1. Скачать и заполнить шаблон",
+    downloadHint: "Скачайте шаблон и заполните его.",
     downloadBtn: "Скачать шаблон",
-    fillTitle: "Шаг 2. Заполнить raw_name",
-    fillHint: "Добавьте модели в колонку raw_name.",
-    fillExample: "Пример: Model A 23 - Li Solo",
-    uploadTitle: "Шаг 3. Загрузка и скачивание",
-    uploadHint: "Загрузите файл и скачайте результат.",
-    uploadBtn: "Перейти к загрузке",
-    resultsTitle: "Результаты",
-    downloadOutput: "Скачать output.xlsx",
-    colRaw: "raw_name",
-    colSku: "sku",
-    colModel: "model",
-    colNote: "note",
+    uploadTitle: "Шаг 2. Загрузка и скачивание результата",
+    uploadHint: "Загрузите заполненный файл и скачайте результат.",
+    downloadOutput: "Скачать файл результата",
     statusReady: "Готово.",
     statusProcessing: "Обработка...",
     statusError: "Ошибка:",
@@ -68,14 +48,9 @@ const els = {
   fileInput: document.getElementById("fileInput"),
   processBtn: document.getElementById("processBtn"),
   statusMsg: document.getElementById("statusMsg"),
-  resultsCard: document.getElementById("resultsCard"),
-  resultsTick: document.getElementById("resultsTick"),
-  resultsTable: document.getElementById("resultsTable"),
   downloadBtn: document.getElementById("downloadBtn"),
   templateBtn: document.getElementById("templateBtn"),
   themeToggle: document.getElementById("themeToggle"),
-  scrollUploadBtn: document.getElementById("scrollUploadBtn"),
-  uploadSection: document.getElementById("uploadSection"),
 };
 
 let currentLang = "en";
@@ -130,20 +105,6 @@ function mapErrorMessage(code, dict) {
   }
 }
 
-function renderTable(rows) {
-  const tbody = els.resultsTable.querySelector("tbody");
-  tbody.innerHTML = "";
-  rows.slice(0, 200).forEach((row) => {
-    const tr = document.createElement("tr");
-    [row.raw_name, row.sku, row.model, row.note].forEach((value) => {
-      const td = document.createElement("td");
-      td.textContent = value || "";
-      tr.appendChild(td);
-    });
-    tbody.appendChild(tr);
-  });
-}
-
 async function handleProcess() {
   const dict = STRINGS[currentLang];
   const file = els.fileInput.files[0];
@@ -171,9 +132,6 @@ async function handleProcess() {
     }
 
     latestRows = payload.rows || [];
-    renderTable(latestRows);
-    els.resultsCard.classList.remove("is-hidden");
-    els.resultsTick.classList.remove("is-hidden");
     els.downloadBtn.disabled = false;
     setStatus(dict.statusDone(latestRows.length), "success");
   } catch (err) {
@@ -236,11 +194,6 @@ function init() {
   els.processBtn.addEventListener("click", handleProcess);
   els.downloadBtn.addEventListener("click", downloadOutput);
   els.templateBtn.addEventListener("click", downloadTemplate);
-  if (els.scrollUploadBtn && els.uploadSection) {
-    els.scrollUploadBtn.addEventListener("click", () => {
-      els.uploadSection.scrollIntoView({ behavior: "smooth", block: "start" });
-    });
-  }
 }
 
 window.addEventListener("DOMContentLoaded", init);

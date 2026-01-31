@@ -27,54 +27,21 @@
   <main class="content">
     <section class="grid">
       <div class="card">
-        <h2 data-i18n="downloadTitle">Step 1. Download sample</h2>
-        <p class="muted" data-i18n="downloadHint">Download the sample file and fill raw_name.</p>
-        <button id="templateBtn" class="btn" type="button" data-i18n="downloadBtn">Download sample</button>
-      </div>
-
-      <div class="card">
-        <h2 data-i18n="fillTitle">Step 2. Fill raw_name</h2>
-        <p class="muted" data-i18n="fillHint">Add models into the column header raw_name.</p>
-        <div class="muted" data-i18n="fillExample">Example: Model A 23 - Li Solo</div>
-      </div>
-
-      <div class="card">
-        <h2 data-i18n="uploadTitle">Step 3. Upload & download</h2>
-        <p class="muted" data-i18n="uploadHint">Upload the file and download the output.</p>
-        <button id="scrollUploadBtn" class="btn" type="button" data-i18n="uploadBtn">Go to upload</button>
+        <h2 data-i18n="downloadTitle">Step 1. Download and fill template</h2>
+        <p class="muted" data-i18n="downloadHint">Download the template file and fill it in.</p>
+        <button id="templateBtn" class="btn" type="button" data-i18n="downloadBtn">Download template</button>
       </div>
 
       <div class="card wide" id="uploadSection">
-        <h2 data-i18n="stepTitle">Upload file</h2>
+        <h2 data-i18n="uploadTitle">Step 2. Upload and download output</h2>
+        <p class="muted" data-i18n="uploadHint">Upload the fulfilled file and download the output file.</p>
         <p class="muted" data-i18n="stepHint">First sheet, single column header raw_name.</p>
         <div class="upload-row">
           <input id="fileInput" class="input" type="file" accept=".xlsx" />
           <button id="processBtn" class="btn primary" type="button" disabled data-i18n="processBtn">Process</button>
+          <button id="downloadBtn" class="btn" type="button" disabled data-i18n="downloadOutput">Download output file</button>
         </div>
         <p id="statusMsg" class="msg"></p>
-      </div>
-    </section>
-
-    <section id="resultsCard" class="card wide is-hidden">
-      <h2>
-        <span data-i18n="resultsTitle">Results</span>
-        <span id="resultsTick" class="results-tick is-hidden" aria-hidden="true">✅</span>
-      </h2>
-      <div class="row">
-        <button id="downloadBtn" class="btn primary" type="button" disabled data-i18n="downloadOutput">Download output.xlsx</button>
-      </div>
-      <div class="table-wrap">
-        <table class="table" id="resultsTable">
-          <thead>
-            <tr>
-              <th data-i18n="colRaw">raw_name</th>
-              <th data-i18n="colSku">sku</th>
-              <th data-i18n="colModel">model</th>
-              <th data-i18n="colNote">note</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
       </div>
     </section>
   </main>
