@@ -13,6 +13,7 @@ import os
 os.environ["STREAMLIT_HOME"] = "/tmp"
 
 import io
+import re
 import traceback
 import pandas as pd
 import streamlit as st
@@ -119,53 +120,87 @@ def load_reference(ref_path: str):
     if any(c not in cols_lower for c in needed):
         raise ValueError("REF_BAD_SCHEMA")
     for c in needed:
-        df[c] = df[c].astype(str).fillna("").str.strip()
+        df[c] = df[c].fillna("").astype(str).str.strip()
     return df
+
+def _normalize_model(s: str) -> str:
+    # Lowercase and remove all whitespace to make matching robust.
+    return re.sub(r"\s+", "", str(s).strip().lower())
+
+def _normalize_model_alnum(s: str) -> str:
+    # Lowercase and remove all non-alphanumeric characters.
+    return re.sub(r"[^a-z0-9]+", "", str(s).strip().lower())
 
 def process(raw_df: pd.DataFrame, ref_df: pd.DataFrame) -> pd.DataFrame:
     cols_lower = [str(c).strip().lower() for c in raw_df.columns]
     if len(cols_lower) != 1 or cols_lower[0] != "raw_name":
         raise ValueError("BAD_HEADER")
 
-    df_raw = pd.DataFrame({"raw_name": raw_df.iloc[:, 0].astype(str).fillna("")})
+    df_raw = pd.DataFrame({"raw_name": raw_df.iloc[:, 0].fillna("").astype(str)})
     sku_list = ref_df["sku"].astype(str).tolist()
-    sku_list_l = [s.lower() for s in sku_list]
-    model_map_l = dict(zip(sku_list_l, ref_df["model"].astype(str)))
+    sku_list_sorted = sorted([s for s in sku_list if s], key=len, reverse=True)
+    # Match SKU only when not surrounded by other digits.
+    # Example: 1234 should NOT match 123456.
+    sku_patterns = [
+        (re.compile(rf"(?<!\d){re.escape(sku)}(?!\d)"), sku)
+        for sku in sku_list_sorted
+    ]
+    model_map_l = dict(zip([s.lower() for s in sku_list], ref_df["model"].astype(str)))
 
     raw_models = ref_df["raw_model"].astype(str).tolist()
-    raw_models_l = [rm.lower() for rm in raw_models]
-    rm_to_sku   = dict(zip(raw_models_l, ref_df["sku"].astype(str)))
-    rm_to_model = dict(zip(raw_models_l, ref_df["model"].astype(str)))
+    raw_models_norm = [_normalize_model(rm) for rm in raw_models]
+    rm_to_sku   = dict(zip(raw_models_norm, ref_df["sku"].astype(str)))
+    rm_to_model = dict(zip(raw_models_norm, ref_df["model"].astype(str)))
+    raw_models_norm_sorted = sorted([rm for rm in raw_models_norm if rm], key=len, reverse=True)
 
-    found_skus, found_models = [], []
+    raw_models_norm_alnum = [_normalize_model_alnum(rm) for rm in raw_models]
+    rm_to_sku_alnum   = dict(zip(raw_models_norm_alnum, ref_df["sku"].astype(str)))
+    rm_to_model_alnum = dict(zip(raw_models_norm_alnum, ref_df["model"].astype(str)))
+    raw_models_norm_alnum_sorted = sorted([rm for rm in raw_models_norm_alnum if rm], key=len, reverse=True)
+
+    found_skus, found_models, notes = [], [], []
 
     # Pass 1: SKU detection
     for name in df_raw["raw_name"]:
         nm = str(name).lower()
         hit = None
-        for sku_l, sku_orig in zip(sku_list_l, sku_list):
-            if sku_l and sku_l in nm:
+        for pat, sku_orig in sku_patterns:
+            if pat.search(nm):
                 hit = sku_orig
                 break
         if hit:
             found_skus.append(hit)
             found_models.append(model_map_l[hit.lower()])
+            notes.append("")
         else:
             found_skus.append("not found")
             found_models.append("not found")
+            notes.append("")
 
     # Pass 2: raw_model detection
-    for i, nm in enumerate(df_raw["raw_name"].astype(str).str.lower()):
+    for i, nm in enumerate(df_raw["raw_name"].astype(str).map(_normalize_model)):
         if found_skus[i] == "not found":
-            for rm_l in raw_models_l:
-                if rm_l and rm_l in nm:
-                    found_skus[i] = rm_to_sku[rm_l]
-                    found_models[i] = rm_to_model[rm_l]
+            # Exact normalized match only (no substring matching)
+            for rm_n in raw_models_norm_sorted:
+                if rm_n and rm_n == nm:
+                    found_skus[i] = rm_to_sku[rm_n]
+                    found_models[i] = rm_to_model[rm_n]
+                    break
+
+    # Pass 3: punctuation-stripped match, mark for manual review
+    for i, nm in enumerate(df_raw["raw_name"].astype(str).map(_normalize_model_alnum)):
+        if found_skus[i] == "not found":
+            for rm_n in raw_models_norm_alnum_sorted:
+                if rm_n and rm_n == nm:
+                    found_skus[i] = rm_to_sku_alnum[rm_n]
+                    found_models[i] = rm_to_model_alnum[rm_n]
+                    notes[i] = "check: matched after removing punctuation"
                     break
 
     out = df_raw.copy()
     out["sku"] = found_skus
     out["model"] = found_models
+    out["note"] = notes
     return out
 
 def make_template_bytes() -> bytes:
