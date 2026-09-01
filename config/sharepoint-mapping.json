@@ -1,0 +1,20 @@
+{
+  "sharepoint": {
+    "site_hostname": "bavatools.sharepoint.com",
+    "site_path": "/sites/Einhell_common",
+    "file_path": "/Shared Documents/General/_system_files/Bava_data.xlsx"
+  },
+  "tables": {
+    "raw_model": {
+      "name": "_param_table",
+      "sku_column": "SKU",
+      "value_column": "Model"
+    },
+    "model": {
+      "name": "_rus_kaz_table",
+      "sku_column": "SKU",
+      "value_column": "Описание"
+    }
+  },
+  "output_path": "public/sku_model_list.xlsx"
+}

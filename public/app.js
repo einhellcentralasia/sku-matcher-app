@@ -7,6 +7,16 @@ const STRINGS = {
     downloadTitle: "Step 1. Download and fill template",
     downloadHint: "Download the template file and fill it in.",
     downloadBtn: "Download template",
+    updateTitle: "Reference data",
+    updateHint: "Pull the latest SKU and model data from Bava_data.",
+    updateBtn: "Update from Bava_data",
+    updateBtnWorking: "Updating data...",
+    updateStarting: "Starting the data update...",
+    updateRunning: "Data update is in progress. Please keep this page open.",
+    updateSuccess: "Update completed. The new data will be used after Cloudflare finishes deployment.",
+    updateFailure: "Update failed. Check the GitHub Actions run.",
+    updateTimeout: "The update is still running. Check GitHub Actions for its current status.",
+    updateError: (message) => `Update error: ${message}`,
     uploadTitle: "Step 2. Upload and download output",
     uploadHint: "Upload the fulfilled file and download the output file.",
     downloadOutput: "Download output file",
@@ -26,6 +36,16 @@ const STRINGS = {
     downloadTitle: "Шаг 1. Скачать и заполнить шаблон",
     downloadHint: "Скачайте шаблон и заполните его.",
     downloadBtn: "Скачать шаблон",
+    updateTitle: "Справочные данные",
+    updateHint: "Загрузите актуальные SKU и модели из файла Bava_data.",
+    updateBtn: "Обновить из Bava_data",
+    updateBtnWorking: "Данные обновляются...",
+    updateStarting: "Запуск обновления данных...",
+    updateRunning: "Данные обновляются. Не закрывайте эту страницу.",
+    updateSuccess: "Обновление завершено. Новые данные будут использоваться после развертывания Cloudflare.",
+    updateFailure: "Обновление завершилось с ошибкой. Проверьте запуск GitHub Actions.",
+    updateTimeout: "Обновление еще выполняется. Проверьте текущий статус в GitHub Actions.",
+    updateError: (message) => `Ошибка обновления: ${message}`,
     uploadTitle: "Шаг 2. Загрузка и скачивание результата",
     uploadHint: "Загрузите заполненный файл и скачайте результат.",
     downloadOutput: "Скачать файл результата",
@@ -39,6 +59,11 @@ const STRINGS = {
   },
 };
 
+const UPDATE_DATA_URL = "/api/update-data";
+const UPDATE_STATUS_URL = "/api/update-status";
+const UPDATE_POLL_INTERVAL_MS = 5000;
+const UPDATE_POLL_TIMEOUT_MS = 7 * 60 * 1000;
+
 const storageKeys = {
   lang: "skuMatcherLang",
   theme: "skuMatcherTheme",
@@ -50,12 +75,16 @@ const els = {
   statusMsg: document.getElementById("statusMsg"),
   downloadBtn: document.getElementById("downloadBtn"),
   templateBtn: document.getElementById("templateBtn"),
+  updateDataBtn: document.getElementById("updateDataBtn"),
+  updateStatusMsg: document.getElementById("updateStatusMsg"),
   themeToggle: document.getElementById("themeToggle"),
 };
 
 let currentLang = "en";
 let currentTheme = "dark";
 let latestRows = [];
+let updatePollTimeoutId = null;
+let updateState = { phase: "idle", detail: "" };
 
 function setTheme(theme) {
   currentTheme = theme;
@@ -82,6 +111,106 @@ function setLang(lang) {
   if (els.statusMsg.textContent) {
     els.statusMsg.textContent = dict.statusReady;
     els.statusMsg.className = "msg";
+  }
+  renderUpdateState();
+}
+
+function renderUpdateState() {
+  if (!els.updateDataBtn || !els.updateStatusMsg) return;
+  const dict = STRINGS[currentLang];
+  const isBusy = updateState.phase === "starting" || updateState.phase === "running";
+  els.updateDataBtn.disabled = isBusy;
+  els.updateDataBtn.classList.toggle("is-loading", isBusy);
+  els.updateDataBtn.setAttribute("aria-busy", String(isBusy));
+  els.updateDataBtn.textContent = isBusy ? dict.updateBtnWorking : dict.updateBtn;
+
+  const stateConfig = {
+    idle: { message: "", type: "" },
+    starting: { message: dict.updateStarting, type: "running" },
+    running: { message: dict.updateRunning, type: "running" },
+    success: { message: dict.updateSuccess, type: "success" },
+    failure: { message: dict.updateFailure, type: "error" },
+    timeout: { message: dict.updateTimeout, type: "error" },
+    error: { message: dict.updateError(updateState.detail), type: "error" },
+  };
+  const config = stateConfig[updateState.phase] || stateConfig.error;
+  els.updateStatusMsg.textContent = config.message;
+  els.updateStatusMsg.className = `msg update-status ${config.type}`.trim();
+}
+
+function setUpdateState(phase, detail = "") {
+  updateState = { phase, detail };
+  renderUpdateState();
+}
+
+function stopUpdatePolling() {
+  if (updatePollTimeoutId !== null) {
+    window.clearTimeout(updatePollTimeoutId);
+    updatePollTimeoutId = null;
+  }
+}
+
+function scheduleUpdatePoll(updateSession) {
+  stopUpdatePolling();
+  const startedAtTimestamp = Date.parse(updateSession?.startedAt ?? "");
+  if (!Number.isFinite(startedAtTimestamp)) {
+    setUpdateState("error", "Invalid update session.");
+    return;
+  }
+  setUpdateState("running");
+
+  const poll = async () => {
+    if (Date.now() - startedAtTimestamp > UPDATE_POLL_TIMEOUT_MS) {
+      stopUpdatePolling();
+      setUpdateState("timeout");
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `${UPDATE_STATUS_URL}?since=${encodeURIComponent(updateSession.startedAt)}`,
+        { headers: { Accept: "application/json" }, cache: "no-store" },
+      );
+      const payload = await response.json();
+      if (!response.ok || !payload.ok) {
+        throw new Error(payload.error || "Failed to load update status.");
+      }
+      if (payload.state === "success") {
+        stopUpdatePolling();
+        setUpdateState("success");
+        return;
+      }
+      if (payload.state === "failure") {
+        stopUpdatePolling();
+        setUpdateState("failure");
+        return;
+      }
+      setUpdateState("running");
+      updatePollTimeoutId = window.setTimeout(poll, UPDATE_POLL_INTERVAL_MS);
+    } catch (error) {
+      stopUpdatePolling();
+      setUpdateState("error", error instanceof Error ? error.message : "Unknown error");
+    }
+  };
+
+  updatePollTimeoutId = window.setTimeout(poll, 1500);
+}
+
+async function handleDataUpdate() {
+  stopUpdatePolling();
+  setUpdateState("starting");
+  try {
+    const response = await fetch(UPDATE_DATA_URL, {
+      method: "POST",
+      headers: { Accept: "application/json" },
+    });
+    const payload = await response.json();
+    if (!response.ok || !payload.ok) {
+      throw new Error(payload.error || "Failed to start data update.");
+    }
+    scheduleUpdatePoll(payload.updateSession);
+  } catch (error) {
+    setUpdateState("error", error instanceof Error ? error.message : "Unknown error");
   }
 }
 
@@ -204,6 +333,7 @@ function init() {
   els.processBtn.addEventListener("click", handleProcess);
   els.downloadBtn.addEventListener("click", downloadOutput);
   els.templateBtn.addEventListener("click", downloadTemplate);
+  els.updateDataBtn?.addEventListener("click", handleDataUpdate);
 }
 
 window.addEventListener("DOMContentLoaded", init);

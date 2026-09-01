@@ -32,6 +32,15 @@
         <button id="templateBtn" class="btn" type="button" data-i18n="downloadBtn">Download template</button>
       </div>
 
+      <div class="card update-card">
+        <h2 data-i18n="updateTitle">Reference data</h2>
+        <p class="muted" data-i18n="updateHint">Pull the latest SKU and model data from Bava_data.</p>
+        <button id="updateDataBtn" class="btn" type="button" data-i18n="updateBtn">
+          Update from Bava_data
+        </button>
+        <p id="updateStatusMsg" class="msg update-status" role="status" aria-live="polite"></p>
+      </div>
+
       <div class="card wide" id="uploadSection">
         <h2 data-i18n="uploadTitle">Step 2. Upload and download output</h2>
         <p class="muted" data-i18n="uploadHint">Upload the fulfilled file and download the output file.</p>
