@@ -25,6 +25,8 @@ const STRINGS = {
     statusError: "Error:",
     statusDone: (count) => `Done. Rows: ${count}`,
     statusNoFile: "Please select an .xlsx file.",
+    dropHint: "Drag and drop the .xlsx file here, or choose it below.",
+    statusDropBad: "Only one .xlsx file can be dropped.",
     statusBadHeader: "The first sheet must have a single header named raw_name.",
     statusBadRef: "Reference file must contain columns: sku, model, raw_model.",
   },
@@ -54,6 +56,8 @@ const STRINGS = {
     statusError: "Ошибка:",
     statusDone: (count) => `Готово. Строк: ${count}`,
     statusNoFile: "Выберите файл .xlsx.",
+    dropHint: "Перетащите файл .xlsx сюда или выберите его ниже.",
+    statusDropBad: "Можно перетащить только один файл .xlsx.",
     statusBadHeader: "В первом листе должна быть одна колонка raw_name.",
     statusBadRef: "Справочник должен содержать колонки: sku, model, raw_model.",
   },
@@ -90,8 +94,10 @@ function setTheme(theme) {
   currentTheme = theme;
   document.documentElement.setAttribute("data-theme", theme);
   localStorage.setItem(storageKeys.theme, theme);
-  const icon = theme === "dark" ? "☀" : "☾";
-  els.themeToggle.textContent = icon;
+  els.themeToggle.setAttribute(
+    "aria-label",
+    theme === "dark" ? "Dark theme — switch to light" : "Light theme — switch to dark"
+  );
 }
 
 function setLang(lang) {
@@ -308,6 +314,47 @@ function downloadTemplate() {
   URL.revokeObjectURL(url);
 }
 
+// ----- Drag & drop (replicated from the warranty repo): drop the file anywhere on the upload card -----
+function initDropzone() {
+  const zone = document.getElementById("uploadSection");
+  const hasFiles = (e) => e.dataTransfer && Array.from(e.dataTransfer.types || []).includes("Files");
+  let dragDepth = 0;
+  zone.addEventListener("dragenter", (e) => {
+    if (!hasFiles(e)) return;
+    e.preventDefault();
+    dragDepth++;
+    zone.classList.add("dragover");
+  });
+  zone.addEventListener("dragover", (e) => {
+    if (!hasFiles(e)) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "copy";
+  });
+  zone.addEventListener("dragleave", () => {
+    dragDepth = Math.max(0, dragDepth - 1);
+    if (!dragDepth) zone.classList.remove("dragover");
+  });
+  zone.addEventListener("drop", (e) => {
+    if (!hasFiles(e)) return;
+    e.preventDefault();
+    dragDepth = 0;
+    zone.classList.remove("dragover");
+    const files = Array.from(e.dataTransfer.files || []);
+    if (files.length !== 1 || !/\.xlsx$/i.test(files[0].name)) {
+      setStatus(STRINGS[currentLang].statusDropBad, "error");
+      return;
+    }
+    els.fileInput.files = e.dataTransfer.files;
+    els.fileInput.dispatchEvent(new Event("change"));
+  });
+  // A file dropped just outside the card must not navigate the browser away from the page.
+  ["dragover", "drop"].forEach((ev) =>
+    window.addEventListener(ev, (e) => {
+      if (hasFiles(e)) e.preventDefault();
+    })
+  );
+}
+
 function init() {
   const savedLang = localStorage.getItem(storageKeys.lang);
   const savedTheme = localStorage.getItem(storageKeys.theme);
@@ -329,6 +376,7 @@ function init() {
   els.fileInput.addEventListener("change", () => {
     els.processBtn.disabled = !els.fileInput.files.length;
   });
+  initDropzone();
 
   els.processBtn.addEventListener("click", handleProcess);
   els.downloadBtn.addEventListener("click", downloadOutput);

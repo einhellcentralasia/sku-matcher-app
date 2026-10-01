@@ -28,7 +28,8 @@ Matching logic:
 - `functions/api/update-data.js` — dispatches the mapping workflow from the UI
 - `functions/api/update-status.js` — reports queued, running, successful, or failed workflow state
 - `.github/workflows/sync-sharepoint-mapping.yml` — on-demand GitHub Actions sync
-- `public/logo.png` — logo
+- `public/logo-light.svg`, `public/logo-dark.svg` — logos per theme; `public/header-ui.css` — theme/language toggles
+- `public/favicon.svg`, `favicon.ico`, `apple-touch-icon.png`, `icon-192.png`, `icon-512.png`, `manifest.webmanifest` — barcode-scan app icon (Lucide `scan-barcode`, white on Einhell red `#d50b1f`) for the browser tab and for "Add to Dock / Home Screen"; `icon-full.svg` is the full-bleed source for the PNGs.
 
 ## Cloudflare Pages setup
 - Build command: *(none)*

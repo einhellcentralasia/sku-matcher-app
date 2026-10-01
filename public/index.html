@@ -3,13 +3,20 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="theme-color" content="#d50b1f" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="icon" href="/favicon.ico" sizes="any" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <link rel="manifest" href="/manifest.webmanifest" />
   <title>SKU / Model Matcher</title>
   <link rel="stylesheet" href="/style.css" />
+  <link rel="stylesheet" href="/header-ui.css" />
 </head>
 <body>
   <header class="topbar">
     <div class="brand">
-      <img class="logo" src="/logo.png" alt="Einhell" />
+      <img class="logo logo-light" src="/logo-light.svg" alt="Einhell" />
+      <img class="logo logo-dark" src="/logo-dark.svg" alt="" aria-hidden="true" />
       <div class="brand-text">
         <span class="title" data-i18n="title">SKU / Model Matcher</span>
         <span class="subtitle" data-i18n="subtitle">Upload → Process → Download</span>
@@ -17,10 +24,13 @@
     </div>
     <div class="topbar-links">
       <div class="pill lang-toggle" aria-label="Language">
-        <button class="lang-btn" type="button" data-lang="en">EN</button>
-        <button class="lang-btn" type="button" data-lang="ru">RU</button>
+        <span class="pill-thumb" aria-hidden="true"></span>
+        <button class="langBtn" type="button" data-lang="en">EN</button>
+        <button class="langBtn" type="button" data-lang="ru">RU</button>
       </div>
-      <button class="toggle" id="themeToggle" type="button" aria-label="Toggle theme">☾</button>
+      <button class="toggle" id="themeToggle" type="button" title="Theme" aria-label="Theme">
+        <span class="bulb" aria-hidden="true">💡</span>
+      </button>
     </div>
   </header>
 
@@ -29,24 +39,30 @@
       <div class="card">
         <h2 data-i18n="downloadTitle">Step 1. Download and fill template</h2>
         <p class="muted" data-i18n="downloadHint">Download the template file and fill it in.</p>
-        <button id="templateBtn" class="btn" type="button" data-i18n="downloadBtn">Download template</button>
+        <div class="card-action">
+          <button id="templateBtn" class="btn" type="button" data-i18n="downloadBtn">Download template</button>
+        </div>
       </div>
 
       <div class="card update-card">
         <h2 data-i18n="updateTitle">Reference data</h2>
         <p class="muted" data-i18n="updateHint">Pull the latest SKU and model data from Bava_data.</p>
-        <button id="updateDataBtn" class="btn" type="button" data-i18n="updateBtn">
-          Update from Bava_data
-        </button>
-        <p id="updateStatusMsg" class="msg update-status" role="status" aria-live="polite"></p>
+        <div class="card-action">
+          <button id="updateDataBtn" class="btn" type="button" data-i18n="updateBtn">Update from Bava_data</button>
+          <p id="updateStatusMsg" class="msg update-status" role="status" aria-live="polite"></p>
+        </div>
       </div>
 
-      <div class="card wide" id="uploadSection">
+      <div class="card wide dropzone" id="uploadSection">
         <h2 data-i18n="uploadTitle">Step 2. Upload and download output</h2>
         <p class="muted" data-i18n="uploadHint">Upload the fulfilled file and download the output file.</p>
-        <p class="muted" data-i18n="stepHint">First sheet, single column header raw_name.</p>
-        <div class="upload-row">
+        <div class="drop-area">
+          <svg class="drop-icon" viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>
+          <p class="drop-title" data-i18n="dropHint">Drag and drop the .xlsx file here, or choose it below.</p>
+          <p class="muted" data-i18n="stepHint">First sheet, single column header raw_name.</p>
           <input id="fileInput" class="input" type="file" accept=".xlsx" />
+        </div>
+        <div class="upload-row">
           <button id="processBtn" class="btn" type="button" disabled data-i18n="processBtn">Process</button>
           <button id="downloadBtn" class="btn primary" type="button" disabled data-i18n="downloadOutput">Download output file</button>
         </div>
